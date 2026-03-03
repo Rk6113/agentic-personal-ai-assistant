@@ -1,0 +1,33 @@
+# ── Rust ──────────────────────────────────────────
+/target/
+*.rs.bk
+
+# ── Python ────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.python-version
+
+# ── Node (just in case) ──────────────────────────
+node_modules/
+
+# ── OS / Editor ──────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── Env / Secrets ────────────────────────────────
+.env
+*.key
+*.pem
+
+# ── Logs ─────────────────────────────────────────
+*.log
+
+# ── Build artifacts ──────────────────────────────
+dist/
+build/
