@@ -10,7 +10,14 @@ from fastapi import FastAPI, HTTPException
 
 from . import db
 from .llm_client import extract_memory, generate_plan
-from .models import MemoryResponse, MemoryStoreRequest, PlanRequest, PlanResponse
+from .models import (
+    MemoryResponse,
+    MemoryStoreRequest,
+    PlanRequest,
+    PlanResponse,
+    WeatherAdvice,
+    WeatherResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -91,4 +98,27 @@ def memory_get(memory_key: str, scope: str = "global") -> MemoryResponse:
         scope=row["scope"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
+    )
+
+
+# ── Weather ──────────────────────────────────────────────────────────────────
+
+
+@app.get("/weather", response_model=WeatherResponse)
+def weather(lat: float, lon: float) -> WeatherResponse:
+    """Fetch current weather + clothing advice for the given coordinates."""
+    from .weather import get_weather, weather_advice
+
+    try:
+        data = get_weather(lat, lon)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    advice = weather_advice(data["feels_like_f"], data["wind_mph"], data["rain_prob"])
+
+    return WeatherResponse(
+        lat=lat,
+        lon=lon,
+        weather=data,
+        advice=WeatherAdvice(**advice),
     )

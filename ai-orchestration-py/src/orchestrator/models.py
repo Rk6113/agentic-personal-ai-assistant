@@ -44,3 +44,18 @@ class MemoryResponse(BaseModel):
     scope: str
     created_at: datetime
     updated_at: datetime
+
+
+# ── Weather models ───────────────────────────────────────────────────────────
+
+
+class WeatherAdvice(BaseModel):
+    category: str = Field(description="Cold / Cool / Mild / Warm / Hot")
+    recommendation: str = Field(description="Clothing recommendation text")
+
+
+class WeatherResponse(BaseModel):
+    lat: float
+    lon: float
+    weather: dict = Field(description="Normalised weather data from OpenWeatherMap")
+    advice: WeatherAdvice

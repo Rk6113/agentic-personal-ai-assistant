@@ -1,9 +1,11 @@
-"""Database client — Postgres connection pool and memory CRUD."""
+"""Database client — Postgres connection pool, memory CRUD, weather cache."""
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -148,3 +150,45 @@ def memory_get(*, mem_key: str, scope: str = "global") -> dict[str, Any] | None:
             """,
             (user_id, mem_key, scope),
         ).fetchone()
+
+
+# ── Weather cache ────────────────────────────────────────────────────────────
+
+
+def weather_cache_get(*, location_key: str) -> dict[str, Any] | None:
+    """Return the cached forecast if still fresh, else ``None``."""
+    user_id = ensure_default_user()
+    pool = get_pool()
+    with pool.connection() as conn:
+        row = conn.execute(
+            """
+            SELECT forecast
+            FROM weather_cache
+            WHERE user_id = %s AND location = %s AND expires_at > now()
+            ORDER BY fetched_at DESC
+            LIMIT 1
+            """,
+            (user_id, location_key),
+        ).fetchone()
+        if row is None:
+            return None
+        forecast = row["forecast"]
+        return forecast if isinstance(forecast, dict) else json.loads(forecast)
+
+
+def weather_cache_set(
+    *, location_key: str, forecast: dict[str, Any], ttl_minutes: int = 15
+) -> None:
+    """Insert a new weather cache entry with an explicit expiry."""
+    user_id = ensure_default_user()
+    pool = get_pool()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
+    with pool.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO weather_cache (user_id, location, forecast, expires_at)
+            VALUES (%s, %s, %s::jsonb, %s)
+            """,
+            (user_id, location_key, json.dumps(forecast), expires_at),
+        )
+        conn.commit()

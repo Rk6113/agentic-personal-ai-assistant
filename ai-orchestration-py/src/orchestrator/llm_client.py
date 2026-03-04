@@ -21,6 +21,18 @@ KEYWORD_TOOL_MAP: dict[str, ToolCall] = {
         tool_name="weather_lookup",
         reason="User query mentions weather",
     ),
+    "jacket": ToolCall(
+        tool_name="weather_lookup",
+        reason="User may need outfit advice",
+    ),
+    "cold": ToolCall(
+        tool_name="weather_lookup",
+        reason="User mentions temperature conditions",
+    ),
+    "hot": ToolCall(
+        tool_name="weather_lookup",
+        reason="User mentions temperature conditions",
+    ),
     "remember": ToolCall(
         tool_name="memory_store",
         reason="User query asks to remember something",
@@ -50,6 +62,16 @@ def extract_memory(user_input: str) -> tuple[str, str] | None:
     return None
 
 
+def _enrich_weather_call(tc: ToolCall, context: dict | None) -> ToolCall:
+    """Inject lat/lon from context into a weather_lookup tool call."""
+    tc = tc.model_copy()
+    if context and "lat" in context and "lon" in context:
+        tc.parameters = {"lat": context["lat"], "lon": context["lon"]}
+    else:
+        tc.reason += " (provide lat/lon in context to get results)"
+    return tc
+
+
 def generate_plan(user_input: str, context: dict | None = None) -> PlanResponse:
     """Keyword-based mock planner. Will be replaced by LLM chain."""
     steps: list[ToolCall] = []
@@ -58,8 +80,11 @@ def generate_plan(user_input: str, context: dict | None = None) -> PlanResponse:
     seen: set[str] = set()
     for keyword, tool_call in KEYWORD_TOOL_MAP.items():
         if keyword in lower and tool_call.tool_name not in seen:
-            steps.append(tool_call)
-            seen.add(tool_call.tool_name)
+            tc = tool_call
+            if tc.tool_name == "weather_lookup":
+                tc = _enrich_weather_call(tc, context)
+            steps.append(tc)
+            seen.add(tc.tool_name)
 
     if not steps:
         steps.append(

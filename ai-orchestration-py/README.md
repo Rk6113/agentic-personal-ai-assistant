@@ -6,6 +6,7 @@ Python-based LLM planning and prompt layer for the Agentic Personal AI Assistant
 
 - Python 3.11+
 - A Postgres database (Neon or local). Set `DATABASE_URL` in the **repo-root** `.env`.
+- An OpenWeatherMap API key. Set `OPENWEATHER_API_KEY` in the **repo-root** `.env`.
 
 ## Setup
 
@@ -30,12 +31,13 @@ uvicorn src.orchestrator.app:app --reload --port 8001
 
 ## Endpoints
 
-| Method | Path                     | Description                                      |
-|--------|--------------------------|--------------------------------------------------|
-| GET    | `/healthz`               | Health check — returns `{"status": "ok"}`         |
-| POST   | `/plan`                  | Accepts `PlanRequest`, returns a tool-call plan   |
-| POST   | `/memory/store`          | Upsert a memory (key/value) for the default user  |
-| GET    | `/memory/{memory_key}`   | Retrieve a memory by key (404 if missing)          |
+| Method | Path                     | Description                                       |
+|--------|--------------------------|---------------------------------------------------|
+| GET    | `/healthz`               | Health check — returns `{"status": "ok"}`          |
+| POST   | `/plan`                  | Accepts `PlanRequest`, returns a tool-call plan    |
+| POST   | `/memory/store`          | Upsert a memory (key/value) for the default user   |
+| GET    | `/memory/{memory_key}`   | Retrieve a memory by key (404 if missing)           |
+| GET    | `/weather?lat=&lon=`     | Current weather + clothing advice (cached 15 min)  |
 
 ## Examples
 
@@ -60,6 +62,15 @@ curl -s http://localhost:8001/memory/home_city | python3 -m json.tool
 curl -s -X POST http://localhost:8001/plan \
   -H "Content-Type: application/json" \
   -d '{"user_input": "Remember my favorite color is blue"}' | python3 -m json.tool
+
+# Weather + clothing advice (Denton, TX coordinates)
+curl -s "http://localhost:8001/weather?lat=33.21&lon=-97.13" | python3 -m json.tool
+
+# Plan with weather context (lat/lon provided)
+curl -s -X POST http://localhost:8001/plan \
+  -H "Content-Type: application/json" \
+  -d '{"user_input": "Do I need a jacket today?", "context": {"lat": 33.21, "lon": -97.13}}' \
+  | python3 -m json.tool
 ```
 
 ## Tests
