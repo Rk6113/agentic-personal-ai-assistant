@@ -1,0 +1,46 @@
+{
+  "name": "email_event_reader",
+  "description": "Read-only Gmail access to extract calendar events, deadlines, and reminders from the user's inbox.",
+  "version": "0.1.0",
+  "risk_level": "low",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "user_id": {
+        "type": "string",
+        "description": "UUID of the user whose email to read"
+      },
+      "date_range": {
+        "type": "object",
+        "properties": {
+          "start": { "type": "string", "format": "date" },
+          "end": { "type": "string", "format": "date" }
+        },
+        "required": ["start", "end"]
+      },
+      "max_results": {
+        "type": "integer",
+        "default": 20
+      }
+    },
+    "required": ["user_id", "date_range"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "events": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "starts_at": { "type": "string", "format": "date-time" },
+            "ends_at": { "type": "string", "format": "date-time" },
+            "location": { "type": "string" },
+            "source_email_id": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

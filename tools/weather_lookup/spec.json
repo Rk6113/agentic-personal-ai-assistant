@@ -1,0 +1,32 @@
+{
+  "name": "weather_lookup",
+  "description": "Fetch current weather and forecast from OpenWeatherMap for outfit and commute recommendations.",
+  "version": "0.1.0",
+  "risk_level": "low",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "location": {
+        "type": "string",
+        "description": "City name or lat,lon coordinates"
+      },
+      "units": {
+        "type": "string",
+        "enum": ["metric", "imperial"],
+        "default": "metric"
+      }
+    },
+    "required": ["location"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "temperature": { "type": "number" },
+      "feels_like": { "type": "number" },
+      "humidity": { "type": "integer" },
+      "description": { "type": "string" },
+      "wind_speed": { "type": "number" },
+      "forecast_summary": { "type": "string" }
+    }
+  }
+}

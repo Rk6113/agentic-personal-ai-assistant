@@ -1,0 +1,51 @@
+{
+  "name": "memory_store",
+  "description": "Persist and retrieve user preferences, facts, and learned context in Postgres.",
+  "version": "0.1.0",
+  "risk_level": "medium",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "user_id": {
+        "type": "string",
+        "description": "UUID of the user"
+      },
+      "action": {
+        "type": "string",
+        "enum": ["store", "retrieve"],
+        "description": "Whether to store a new memory or retrieve existing ones"
+      },
+      "category": {
+        "type": "string",
+        "default": "general"
+      },
+      "content": {
+        "type": "string",
+        "description": "Text to store (required for 'store' action)"
+      },
+      "query": {
+        "type": "string",
+        "description": "Search query (required for 'retrieve' action)"
+      }
+    },
+    "required": ["user_id", "action"]
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "stored": { "type": "boolean" },
+      "memories": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": { "type": "string" },
+            "category": { "type": "string" },
+            "content": { "type": "string" },
+            "created_at": { "type": "string", "format": "date-time" }
+          }
+        }
+      }
+    }
+  }
+}

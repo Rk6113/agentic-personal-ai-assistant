@@ -55,17 +55,36 @@ checks the weather, and delivers a concise morning brief — so you start every 
 
 ```
 agentic-personal-ai-assistant/
+├── assistant-core-rs/       # Rust assistant core (CLI, policy, tool registry, scheduler)
+│   ├── Cargo.toml
+│   └── src/
+│       ├── main.rs          # CLI: --health, --list-tools, --brief
+│       ├── lib.rs
+│       └── core/
+│           ├── mod.rs
+│           ├── types.rs     # ToolRequest, ToolResponse, RiskLevel
+│           ├── tool_registry.rs
+│           ├── policy.rs    # v1: allow Low/Medium, block High/Critical
+│           └── scheduler.rs
+├── ai-orchestration-py/     # Python AI orchestration (FastAPI)
+│   ├── pyproject.toml
+│   ├── README.md
+│   └── src/orchestrator/
+│       ├── app.py           # /healthz, /plan endpoints
+│       ├── models.py        # PlanRequest, PlanResponse, ToolCall
+│       ├── llm_client.py    # Stub keyword planner (LLM later)
+│       └── prompts/         # System & planner prompt templates
+├── database/                # Postgres DDL
+│   ├── schema.sql           # v1 tables (users, events, audit_logs, …)
+│   └── README.md
+├── tools/                   # Tool contracts (spec.json + README per tool)
+│   ├── email_event_reader/
+│   ├── weather_lookup/
+│   └── memory_store/
+├── scripts/                 # Dev helper scripts
+│   ├── check_health.sh
+│   └── setup_db.sh
 ├── docs/                    # Design documents (PRD, architecture, data, security, tests)
-│   ├── 01_prd_v1.md
-│   ├── 02_system_architecture_v1.md
-│   ├── 03_data_memory_design_v1.md
-│   ├── 04_tool_skills_contract_v1.md
-│   ├── 05_security_privacy_spec_v1.md
-│   └── 06_test_plan_v1.md
-├── rust-core/               # (planned) Rust assistant core crate
-├── python-ai/               # (planned) Python orchestration package
-├── migrations/              # (planned) SQL / dbmate migrations
-├── scripts/                 # (planned) Dev helper scripts
 ├── .env.example             # Safe env template — copy to .env
 ├── .gitignore
 ├── PROJECT_CONTEXT.md       # One-page handoff for new chat sessions
@@ -76,8 +95,6 @@ agentic-personal-ai-assistant/
 
 ## Quickstart
 
-> Full setup instructions will be added once scaffolding is complete.
-
 ```bash
 # 1. Clone the repo
 git clone https://github.com/<your-org>/agentic-personal-ai-assistant.git
@@ -87,17 +104,25 @@ cd agentic-personal-ai-assistant
 cp .env.example .env
 # edit .env with your API keys
 
-# 3. Start Postgres (example using Docker)
-docker compose up -d db
+# 3. Start Postgres and apply schema
+docker compose up -d db          # (docker-compose.yml coming soon)
+./scripts/setup_db.sh
 
-# 4. Build the Rust core
-cd rust-core && cargo build --release && cd ..
+# 4. Build & sanity-check the Rust core
+cd assistant-core-rs
+cargo build
+cargo run -- --health            # prints "ok"
+cargo run -- --list-tools        # lists registered tools
+cd ..
 
-# 5. Set up the Python environment
-cd python-ai && python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && cd ..
-
-# 6. Run the morning brief
-cargo run -- brief
+# 5. Set up & run the Python orchestration service
+cd ai-orchestration-py
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+uvicorn src.orchestrator.app:app --reload --port 8001
+# In another terminal:
+#   curl http://localhost:8001/healthz
+cd ..
 ```
 
 ---
