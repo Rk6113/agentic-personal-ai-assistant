@@ -39,14 +39,17 @@ CREATE INDEX idx_preferences_user ON preferences (user_id);
 CREATE TABLE memories (
     id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id     UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    category    TEXT NOT NULL DEFAULT 'general',
-    content     TEXT NOT NULL,
-    metadata    JSONB NOT NULL DEFAULT '{}',
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+    mem_key     TEXT NOT NULL,
+    mem_value   TEXT NOT NULL,
+    mem_type    TEXT NOT NULL DEFAULT 'general',
+    scope       TEXT NOT NULL DEFAULT 'global',
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (user_id, mem_key, scope)
 );
 
 CREATE INDEX idx_memories_user ON memories (user_id);
-CREATE INDEX idx_memories_category ON memories (user_id, category);
+CREATE INDEX idx_memories_key ON memories (user_id, mem_key, scope);
 
 -- ─── Email Sources (OAuth tokens, sync state) ───────────────────────────────
 

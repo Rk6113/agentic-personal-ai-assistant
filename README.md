@@ -127,6 +127,18 @@ cd ..
 
 ---
 
+## Smoke Test
+
+Run the end-to-end smoke test (requires a `.env` with `DATABASE_URL` and the Python venv set up):
+
+```bash
+./scripts/smoke_test.sh
+```
+
+This applies the schema, starts uvicorn, writes a memory via the API, reads it back, and reports PASS/FAIL.
+
+---
+
 ## Environment Variables
 
 All secrets live in a `.env` file at the repo root (git-ignored).

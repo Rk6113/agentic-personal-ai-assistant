@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+import uuid
+
 from .models import PlanResponse, ToolCall
 
 
@@ -28,6 +31,24 @@ KEYWORD_TOOL_MAP: dict[str, ToolCall] = {
     ),
 }
 
+_REMEMBER_PATTERN = re.compile(
+    r"remember\s+(?:that\s+)?(?:my\s+)?(.+?)\s+is\s+(.+)",
+    re.IGNORECASE,
+)
+
+
+def extract_memory(user_input: str) -> tuple[str, str] | None:
+    """Try to parse 'remember (my) <key> is <value>' from free text.
+
+    Returns ``(normalised_key, value)`` or ``None``.
+    """
+    match = _REMEMBER_PATTERN.search(user_input)
+    if match:
+        key = match.group(1).strip().replace(" ", "_").lower()
+        value = match.group(2).strip().rstrip(".")
+        return key, value
+    return None
+
 
 def generate_plan(user_input: str, context: dict | None = None) -> PlanResponse:
     """Keyword-based mock planner. Will be replaced by LLM chain."""
@@ -47,8 +68,6 @@ def generate_plan(user_input: str, context: dict | None = None) -> PlanResponse:
                 reason="Default: fetch today's events for the morning brief",
             )
         )
-
-    import uuid
 
     return PlanResponse(
         plan_id=str(uuid.uuid4()),

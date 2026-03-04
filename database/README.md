@@ -8,7 +8,7 @@ Postgres schema for the Agentic Personal AI Assistant (v1).
 |---|---|
 | `users` | User accounts |
 | `preferences` | Key-value user preferences (JSONB) |
-| `memories` | Facts the assistant learns about the user |
+| `memories` | Key-value facts the assistant learns (mem_key/mem_value, upsert by user+key+scope) |
 | `email_sources` | Gmail OAuth tokens and sync state |
 | `events` | Calendar events extracted from email |
 | `weather_cache` | Cached weather forecasts |
