@@ -122,3 +122,71 @@ def weather(lat: float, lon: float) -> WeatherResponse:
         weather=data,
         advice=WeatherAdvice(**advice),
     )
+
+
+# ── Gmail ────────────────────────────────────────────────────────────────────
+
+
+@app.get("/gmail/connect")
+def gmail_connect() -> dict[str, str]:
+    """Return the Google OAuth consent URL for read-only Gmail access."""
+    from .gmail_oauth import build_auth_url
+
+    try:
+        url = build_auth_url()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"auth_url": url}
+
+
+@app.get("/gmail/oauth/callback")
+def gmail_oauth_callback(code: str, state: str | None = None) -> dict[str, str]:
+    """Exchange the authorization code for tokens and store them."""
+    from .gmail_oauth import (
+        build_gmail_service,
+        credentials_from_token_response,
+        exchange_code_for_token,
+    )
+
+    if not state:
+        raise HTTPException(
+            status_code=400, detail="Missing state parameter; restart /gmail/connect."
+        )
+
+    try:
+        token_response = exchange_code_for_token(code=code, state=state)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    creds = credentials_from_token_response(token_response)
+    service = build_gmail_service(creds)
+    profile = service.users().getProfile(userId="me").execute()
+    provider_email: str = profile["emailAddress"]
+
+    db.gmail_token_upsert(
+        provider_email=provider_email,
+        access_token=creds.token,
+        refresh_token=creds.refresh_token,
+        token_expiry=creds.expiry,
+        scope=",".join(creds.scopes or []),
+    )
+
+    logger.info("Gmail connected: %s", provider_email)
+    return {"status": "connected", "email": provider_email}
+
+
+@app.get("/gmail/messages/latest")
+def gmail_messages_latest(max: int = 5) -> dict:
+    """List the latest Gmail messages using stored OAuth credentials."""
+    from .gmail_oauth import list_latest_messages
+
+    try:
+        email, messages = list_latest_messages(max_results=max)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Gmail API error: {exc}"
+        ) from exc
+
+    return {"email": email, "count": len(messages), "messages": messages}

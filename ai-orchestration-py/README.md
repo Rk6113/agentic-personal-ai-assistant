@@ -7,6 +7,7 @@ Python-based LLM planning and prompt layer for the Agentic Personal AI Assistant
 - Python 3.11+
 - A Postgres database (Neon or local). Set `DATABASE_URL` in the **repo-root** `.env`.
 - An OpenWeatherMap API key. Set `OPENWEATHER_API_KEY` in the **repo-root** `.env`.
+- Gmail OAuth credentials (for email features). See [Gmail Setup](#gmail-setup) below.
 
 ## Setup
 
@@ -38,6 +39,9 @@ uvicorn src.orchestrator.app:app --reload --port 8001
 | POST   | `/memory/store`          | Upsert a memory (key/value) for the default user   |
 | GET    | `/memory/{memory_key}`   | Retrieve a memory by key (404 if missing)           |
 | GET    | `/weather?lat=&lon=`     | Current weather + clothing advice (cached 15 min)  |
+| GET    | `/gmail/connect`         | Returns Google OAuth consent URL                    |
+| GET    | `/gmail/oauth/callback`  | OAuth callback — exchanges code, stores tokens      |
+| GET    | `/gmail/messages/latest` | List latest Gmail messages (requires connected acct)|
 
 ## Examples
 
@@ -73,10 +77,41 @@ curl -s -X POST http://localhost:8001/plan \
   | python3 -m json.tool
 ```
 
+## Gmail Setup
+
+1. Go to [Google Cloud Console → APIs & Services → Credentials](https://console.cloud.google.com/apis/credentials).
+2. Create an **OAuth 2.0 Client ID** (type: Web application).
+3. Add `http://localhost:8001/gmail/oauth/callback` as an **Authorized redirect URI**.
+4. Enable the **Gmail API** in your project.
+5. Copy Client ID and Client Secret into the repo-root `.env`:
+   ```
+   GMAIL_CLIENT_ID=your-client-id.apps.googleusercontent.com
+   GMAIL_CLIENT_SECRET=your-client-secret
+   GMAIL_REDIRECT_URI=http://localhost:8001/gmail/oauth/callback
+   ```
+
+### Manual Verification
+
+```bash
+# 1. Start the server
+uvicorn src.orchestrator.app:app --reload --port 8001
+
+# 2. Get the consent URL
+curl -s http://localhost:8001/gmail/connect | python3 -m json.tool
+# → open the "auth_url" in your browser and approve
+
+# 3. After approval, Google redirects to /gmail/oauth/callback
+#    which stores tokens and returns:
+#    { "status": "connected", "email": "you@gmail.com" }
+
+# 4. Fetch latest messages
+curl -s "http://localhost:8001/gmail/messages/latest?max=3" | python3 -m json.tool
+```
+
 ## Tests
 
-Integration tests require a live Postgres database. They skip automatically when
-`DATABASE_URL` is not set.
+Tests run with `pytest`. Weather-advice tests are pure functions (no API key needed).
+Integration tests require a live Postgres database and skip when `DATABASE_URL` is not set.
 
 ```bash
 # Make sure .env exists at the repo root with a valid DATABASE_URL

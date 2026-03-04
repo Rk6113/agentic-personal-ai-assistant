@@ -192,3 +192,52 @@ def weather_cache_set(
             (user_id, location_key, json.dumps(forecast), expires_at),
         )
         conn.commit()
+
+
+# ── Gmail tokens ─────────────────────────────────────────────────────────────
+
+
+def gmail_token_upsert(
+    *,
+    provider_email: str,
+    access_token: str,
+    refresh_token: str | None,
+    token_expiry: datetime | None,
+    scope: str,
+) -> None:
+    """Insert or update Gmail OAuth tokens for the default user."""
+    user_id = ensure_default_user()
+    pool = get_pool()
+    with pool.connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO gmail_tokens
+                (user_id, provider_email, access_token, refresh_token, token_expiry, scope)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (user_id, provider_email)
+            DO UPDATE SET access_token  = EXCLUDED.access_token,
+                          refresh_token = COALESCE(EXCLUDED.refresh_token, gmail_tokens.refresh_token),
+                          token_expiry  = EXCLUDED.token_expiry,
+                          scope         = EXCLUDED.scope,
+                          updated_at    = now()
+            """,
+            (user_id, provider_email, access_token, refresh_token, token_expiry, scope),
+        )
+        conn.commit()
+
+
+def gmail_token_get() -> dict[str, Any] | None:
+    """Return the most recently updated Gmail token row for the default user."""
+    user_id = ensure_default_user()
+    pool = get_pool()
+    with pool.connection() as conn:
+        return conn.execute(
+            """
+            SELECT provider_email, access_token, refresh_token, token_expiry, scope
+            FROM gmail_tokens
+            WHERE user_id = %s
+            ORDER BY updated_at DESC
+            LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
